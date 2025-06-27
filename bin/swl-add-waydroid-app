@@ -120,7 +120,7 @@ done
 
 # Update desktop database to make the entry appear immediately
 if command -v update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database 2>/dev/null || true
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 fi
 
 # Show result
