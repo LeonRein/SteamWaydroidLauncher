@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SWL: Stop Waydroid
+Exec=pkexec /usr/lib/swl/waydroid-container-stop
+Icon=application-exit
+Categories=X-SWL;
+Comment=Stop the Waydroid container
+Terminal=false
