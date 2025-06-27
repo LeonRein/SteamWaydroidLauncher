@@ -97,8 +97,7 @@ else
     
     action=$(kdialog --menu "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphaned_list" \
         "auto" "Remove orphaned apps (recommended)" \
-        "manual" "Manually select apps to remove" \
-        "cancel" "Cancel cleanup")
+        "manual" "Manually select apps to remove")
     
     case "$action" in
         "auto")
