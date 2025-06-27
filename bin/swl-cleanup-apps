@@ -1,0 +1,92 @@
+#!/bin/bash
+# SteamWaydroidLauncher - Clean up orphaned apps
+
+SWL_DESKTOP_DIR="$HOME/.local/share/applications"
+WAYDROID_DESKTOP_DIR="$HOME/.local/share/applications"
+
+# Find all SWL desktop files
+mapfile -t swl_files < <(find "$SWL_DESKTOP_DIR" -maxdepth 1 -name 'swl.*.desktop' 2>/dev/null)
+
+if [ ${#swl_files[@]} -eq 0 ]; then
+    kdialog --msgbox "No SWL apps found to check."
+    exit 0
+fi
+
+orphaned_files=()
+valid_files=()
+
+# Check each SWL desktop file
+for swl_file in "${swl_files[@]}"; do
+    # Extract package name from filename
+    basename_file=$(basename "$swl_file" .desktop)
+    package_name=${basename_file#swl.}
+    
+    # Get display name for reporting
+    display_name=$(grep -m1 '^Name=' "$swl_file" | cut -d= -f2-)
+    
+    # Special case for main Waydroid launcher
+    if [[ "$package_name" == "Waydroid" ]]; then
+        # Check if Waydroid.desktop exists
+        if [ -f "$WAYDROID_DESKTOP_DIR/Waydroid.desktop" ]; then
+            valid_files+=("$display_name")
+        else
+            orphaned_files+=("$swl_file|$display_name")
+        fi
+    else
+        # Check if corresponding waydroid desktop file exists
+        waydroid_file="$WAYDROID_DESKTOP_DIR/waydroid.$package_name.desktop"
+        if [ -f "$waydroid_file" ]; then
+            valid_files+=("$display_name")
+        else
+            orphaned_files+=("$swl_file|$display_name")
+        fi
+    fi
+done
+
+# Report results
+if [ ${#orphaned_files[@]} -eq 0 ]; then
+    kdialog --msgbox "All SWL apps (${#valid_files[@]}) are still installed in Waydroid.\n\nNo cleanup needed!"
+    exit 0
+fi
+
+# Show orphaned apps and ask for confirmation
+orphaned_names=()
+for entry in "${orphaned_files[@]}"; do
+    IFS='|' read -r file display_name <<< "$entry"
+    orphaned_names+=("$display_name")
+done
+
+orphaned_list=$(printf "%s\n" "${orphaned_names[@]}")
+
+if kdialog --yesno "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphaned_list\n\nThese apps are no longer installed in Waydroid.\nRemove them from desktop/Steam?"; then
+    removed_count=0
+    failed_count=0
+    
+    # Remove orphaned files
+    for entry in "${orphaned_files[@]}"; do
+        IFS='|' read -r file display_name <<< "$entry"
+        if rm -f "$file" 2>/dev/null; then
+            echo "Removed: $file ($display_name)"
+            ((removed_count++))
+        else
+            echo "Failed to remove: $file ($display_name)"
+            ((failed_count++))
+        fi
+    done
+    
+    # Update desktop database
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    fi
+    
+    # Show result
+    if [ $failed_count -eq 0 ]; then
+        kdialog --msgbox "Successfully removed $removed_count orphaned SWL app(s).\n\nNote: You may need to manually remove them from Steam if they were added there."
+    else
+        kdialog --msgbox "Removed $removed_count orphaned app(s), but failed to remove $failed_count.\n\nNote: You may need to manually remove them from Steam if they were added there."
+    fi
+else
+    kdialog --msgbox "Cleanup cancelled. Orphaned apps were not removed."
+fi
+
+exit 0

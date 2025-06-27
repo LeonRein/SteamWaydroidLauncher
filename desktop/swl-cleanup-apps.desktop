@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SWL: Cleanup Apps
+Exec=swl-cleanup-apps
+Icon=edit-clear
+Categories=X-SWL;
+Comment=Remove orphaned Waydroid apps from desktop
+Terminal=false
+StartupNotify=false
