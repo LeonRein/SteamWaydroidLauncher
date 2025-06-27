@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SWL Manager: Stop Waydroid
+Name=SWL-Manager: Stop Waydroid
 Exec=bash -c 'pkexec /usr/lib/swl/waydroid-container-stop; case $? in 0) kdialog --msgbox "Waydroid container stopped successfully";; 1) kdialog --msgbox "Waydroid container was not running";; *) kdialog --error "Failed to stop Waydroid container";; esac'
 Icon=application-exit
 Categories=X-SWL;
