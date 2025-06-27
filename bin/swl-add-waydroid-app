@@ -91,6 +91,9 @@ Name=SWL: $selected_name
 Exec=$exec_cmd
 Icon=$icon
 Categories=X-SWL;
+Comment=Launch $selected_name via SWL
+Terminal=false
+StartupNotify=false
 EOF
 then
     kdialog --error "Failed to create desktop file: $swl_desktop"
@@ -99,6 +102,11 @@ fi
 
 # Make the desktop file executable
 chmod +x "$swl_desktop"
+
+# Update desktop database to make the entry appear immediately
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+fi
 
 steamos-add-to-steam "$swl_desktop" 2>/dev/null || {
     echo "Note: steamos-add-to-steam not found. Please manually add $swl_desktop to Steam."
