@@ -45,25 +45,124 @@ done
 
 # Report results
 if [ ${#orphaned_files[@]} -eq 0 ]; then
-    kdialog --msgbox "All SWL apps (${#valid_files[@]}) are still installed in Waydroid.\n\nNo cleanup needed!"
-    exit 0
+    # No orphaned apps, offer manual selection
+    action=$(kdialog --menu "All SWL apps (${#valid_files[@]}) are still installed in Waydroid." \
+        "cleanup" "No cleanup needed - all apps are valid" \
+        "manual" "Manually select apps to remove")
+    
+    if [[ "$action" != "manual" ]]; then
+        exit 0
+    fi
+    
+    # Manual selection mode - show all apps
+    manual_dialog_args=()
+    for swl_file in "${swl_files[@]}"; do
+        basename_file=$(basename "$swl_file" .desktop)
+        package_name=${basename_file#swl.}
+        display_name=$(grep -m1 '^Name=' "$swl_file" | cut -d= -f2-)
+        manual_dialog_args+=("$package_name" "$display_name" "off")
+    done
+    
+    manual_choices=$(kdialog --checklist "Select SWL apps to remove:" "${manual_dialog_args[@]}")
+    [ -z "$manual_choices" ] && exit 0
+    
+    # Parse manual selections
+    selected_packages=()
+    eval "selected_packages=($manual_choices)"
+    
+    # Convert to file list
+    files_to_remove=()
+    for selected_package in "${selected_packages[@]}"; do
+        for swl_file in "${swl_files[@]}"; do
+            basename_file=$(basename "$swl_file" .desktop)
+            package_name=${basename_file#swl.}
+            if [[ "$package_name" == "$selected_package" ]]; then
+                display_name=$(grep -m1 '^Name=' "$swl_file" | cut -d= -f2-)
+                files_to_remove+=("$swl_file|$display_name")
+                break
+            fi
+        done
+    done
+    
+    removal_type="manual"
+else
+    # Show orphaned apps and ask for confirmation
+    orphaned_names=()
+    for entry in "${orphaned_files[@]}"; do
+        IFS='|' read -r file display_name <<< "$entry"
+        orphaned_names+=("$display_name")
+    done
+
+    orphaned_list=$(printf "%s\n" "${orphaned_names[@]}")
+    
+    action=$(kdialog --menu "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphaned_list" \
+        "auto" "Remove orphaned apps (recommended)" \
+        "manual" "Manually select apps to remove" \
+        "cancel" "Cancel cleanup")
+    
+    case "$action" in
+        "auto")
+            files_to_remove=("${orphaned_files[@]}")
+            removal_type="automatic"
+            ;;
+        "manual")
+            # Manual selection from all apps
+            manual_dialog_args=()
+            for swl_file in "${swl_files[@]}"; do
+                basename_file=$(basename "$swl_file" .desktop)
+                package_name=${basename_file#swl.}
+                display_name=$(grep -m1 '^Name=' "$swl_file" | cut -d= -f2-)
+                
+                # Pre-select orphaned apps
+                preselect="off"
+                for orphaned_entry in "${orphaned_files[@]}"; do
+                    IFS='|' read -r orphaned_file _ <<< "$orphaned_entry"
+                    if [[ "$swl_file" == "$orphaned_file" ]]; then
+                        preselect="on"
+                        break
+                    fi
+                done
+                
+                manual_dialog_args+=("$package_name" "$display_name" "$preselect")
+            done
+            
+            manual_choices=$(kdialog --checklist "Select SWL apps to remove (orphaned apps are pre-selected):" "${manual_dialog_args[@]}")
+            [ -z "$manual_choices" ] && exit 0
+            
+            # Parse manual selections
+            selected_packages=()
+            eval "selected_packages=($manual_choices)"
+            
+            # Convert to file list
+            files_to_remove=()
+            for selected_package in "${selected_packages[@]}"; do
+                for swl_file in "${swl_files[@]}"; do
+                    basename_file=$(basename "$swl_file" .desktop)
+                    package_name=${basename_file#swl.}
+                    if [[ "$package_name" == "$selected_package" ]]; then
+                        display_name=$(grep -m1 '^Name=' "$swl_file" | cut -d= -f2-)
+                        files_to_remove+=("$swl_file|$display_name")
+                        break
+                    fi
+                done
+            done
+            
+            removal_type="manual"
+            ;;
+        *)
+            kdialog --msgbox "Cleanup cancelled."
+            exit 0
+            ;;
+    esac
 fi
 
-# Show orphaned apps and ask for confirmation
-orphaned_names=()
-for entry in "${orphaned_files[@]}"; do
-    IFS='|' read -r file display_name <<< "$entry"
-    orphaned_names+=("$display_name")
-done
-
-orphaned_list=$(printf "%s\n" "${orphaned_names[@]}")
-
-if kdialog --yesno "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphaned_list\n\nThese apps are no longer installed in Waydroid.\nRemove them from desktop/Steam?"; then
+# Perform removal
+if [ ${#files_to_remove[@]} -gt 0 ]; then
     removed_count=0
     failed_count=0
     
-    # Remove orphaned files
-    for entry in "${orphaned_files[@]}"; do
+    # Remove selected files
+    for entry in "${files_to_remove[@]}"; do
         IFS='|' read -r file display_name <<< "$entry"
         if rm -f "$file" 2>/dev/null; then
             echo "Removed: $file ($display_name)"
@@ -81,12 +180,16 @@ if kdialog --yesno "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphane
     
     # Show result
     if [ $failed_count -eq 0 ]; then
-        kdialog --msgbox "Successfully removed $removed_count orphaned SWL app(s).\n\nNote: You may need to manually remove them from Steam if they were added there."
+        if [[ "$removal_type" == "automatic" ]]; then
+            kdialog --msgbox "Successfully removed $removed_count orphaned SWL app(s).\n\nNote: You may need to manually remove them from Steam if they were added there."
+        else
+            kdialog --msgbox "Successfully removed $removed_count SWL app(s).\n\nNote: You may need to manually remove them from Steam if they were added there."
+        fi
     else
-        kdialog --msgbox "Removed $removed_count orphaned app(s), but failed to remove $failed_count.\n\nNote: You may need to manually remove them from Steam if they were added there."
+        kdialog --msgbox "Removed $removed_count app(s), but failed to remove $failed_count.\n\nNote: You may need to manually remove them from Steam if they were added there."
     fi
 else
-    kdialog --msgbox "Cleanup cancelled. Orphaned apps were not removed."
+    kdialog --msgbox "No apps selected for removal."
 fi
 
 exit 0
