@@ -1,3 +1,14 @@
 #!/usr/bin/bash
 
-sudo systemctl stop waydroid-container.service
+# Check if the container is running
+if [ "$(systemctl is-active waydroid-container.service)" = "active" ]; then
+    sudo systemctl stop waydroid-container.service
+    echo "Container stopped"
+    exit 0
+elif [ "$(systemctl is-active waydroid-container.service)" = "inactive" ]; then
+    echo "Container was not running"
+    exit 1
+else
+    echo "Container status unknown"
+    exit 2
+fi
