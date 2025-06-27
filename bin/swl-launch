@@ -40,6 +40,7 @@ fi
 
 # Check if Waydroid is initialized, send user to the docs
 if grep -qz 'not initialized' <<< $(/usr/bin/waydroid status); then
+	kdialog --error "Waydroid is not initialized!\n\nTo set up Waydroid, run this command:\n\nsudo waydroid init\n\nFor detailed setup instructions, visit:\nhttps://docs.waydro.id/\n\nClick OK to open the documentation."
 	xdg-open "https://docs.waydro.id/"
 	exit 1
 fi
