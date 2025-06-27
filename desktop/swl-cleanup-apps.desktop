@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SWL: Cleanup Apps
+Name=SWL Manager: Cleanup Apps
 Exec=swl-cleanup-apps
 Icon=edit-clear
 Categories=X-SWL;

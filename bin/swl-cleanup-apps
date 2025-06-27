@@ -65,18 +65,32 @@ if kdialog --yesno "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphane
     # Remove orphaned files
     for entry in "${orphaned_files[@]}"; do
         IFS='|' read -r file display_name <<< "$entry"
-        if rm -f "$file" 2>/dev/null; then
-            echo "Removed: $file ($display_name)"
-            ((removed_count++))
+        if command -v xdg-desktop-menu >/dev/null 2>&1; then
+            # Use xdg-desktop-menu for proper removal
+            if xdg-desktop-menu uninstall --novendor "$file" 2>/dev/null; then
+                echo "Removed: $file ($display_name)"
+                ((removed_count++))
+            else
+                echo "Failed to remove: $file ($display_name)"
+                ((failed_count++))
+            fi
         else
-            echo "Failed to remove: $file ($display_name)"
-            ((failed_count++))
+            # Fallback to manual removal
+            if rm -f "$file" 2>/dev/null; then
+                echo "Removed: $file ($display_name)"
+                ((removed_count++))
+            else
+                echo "Failed to remove: $file ($display_name)"
+                ((failed_count++))
+            fi
         fi
     done
     
-    # Update desktop database
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    # Update desktop database if we used manual removal
+    if ! command -v xdg-desktop-menu >/dev/null 2>&1; then
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+        fi
     fi
     
     # Show result

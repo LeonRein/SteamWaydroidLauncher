@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SWL: Launch Waydroid
+Name=SWL Launcher: Waydroid
 Exec=swl-launch
 Icon=waydroid
 Categories=X-SWL;

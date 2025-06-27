@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SWL: Add Waydroid App to Steam
+Name=SWL Manager: Add App to Steam
 Exec=swl-add-waydroid-app
 Icon=utilities-terminal
 Categories=X-SWL;
