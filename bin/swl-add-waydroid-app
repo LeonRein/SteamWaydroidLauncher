@@ -105,7 +105,9 @@ chmod +x "$swl_desktop"
 
 # Update desktop database to make the entry appear immediately
 if command -v update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    /usr/bin/update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+elif [ -x /usr/bin/update-desktop-database ]; then
+    /usr/bin/update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 fi
 
 steamos-add-to-steam "$swl_desktop" 2>/dev/null || {

@@ -75,8 +75,8 @@ if kdialog --yesno "Found ${#orphaned_files[@]} orphaned SWL app(s):\n\n$orphane
     done
     
     # Update desktop database
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    if [ -x /usr/bin/update-desktop-database ]; then
+        /usr/bin/update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
     fi
     
     # Show result
